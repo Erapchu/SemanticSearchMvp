@@ -1,4 +1,5 @@
 using EFilerSemanticSearchMvp;
+using Lucene.Net.Search;
 
 Console.OutputEncoding = System.Text.Encoding.UTF8;
 
@@ -23,7 +24,7 @@ var messages = new[]
         "sean@efiler.example",
         new DateTime(2026, 8, 10),
         "Hi Sean, yes, we make bespoke birthday cakes to order. " +
-        "Customers can choose the filling, decoration and delivery date. " +
+        "Customers can choose the filling, decoration and delivery date. United Kingdom " +
         "Please send us the number of guests and the preferred design."),
 
     new MailMessage(
@@ -90,6 +91,28 @@ foreach (var query in examples)
     var message = messages.Single(x => x.Id == best.Id);
     Console.WriteLine($"Semantic winner: #{message.Id} — {message.Subject}");
     Console.WriteLine($"  {message.Body}\n");
+}
+
+var input = Console.ReadLine();
+while (input != null)
+{
+    Console.WriteLine(new string('=', 90));
+    Console.WriteLine($"QUERY: {input}\n");
+
+    var luceneHits = lucene.Search(input, top: 4);
+    var semanticHits = semantic.Search(input, top: 4);
+    var hybridHits = HybridSearch.Merge(luceneHits, semanticHits, top: 4);
+
+    Print("Lucene", luceneHits.Select(x => (x.Id, (double)x.Score)));
+    Print("E5 semantic", semanticHits.Select(x => (x.Id, (double)x.Score)));
+    Print("Hybrid (RRF)", hybridHits.Select(x => (x.Id, x.Score)));
+
+    var best = semanticHits.First();
+    var message = messages.Single(x => x.Id == best.Id);
+    Console.WriteLine($"Semantic winner: #{message.Id} — {message.Subject}");
+    Console.WriteLine($"  {message.Body}\n");
+
+    input = Console.ReadLine();
 }
 
 static void Print(string title, IEnumerable<(string Id, double Score)> hits)
